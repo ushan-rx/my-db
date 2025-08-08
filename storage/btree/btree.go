@@ -7,7 +7,7 @@ import (
 // Node represents a single node in the B-Tree.
 type Node struct {
 	keys     []int         // Keys stored in the node.
-	values   []any // Corresponding values.
+	values   []interface{} // Corresponding values.
 	children []*Node       // Children nodes (nil if leaf).
 	isLeaf   bool          // Whether the node is a leaf.
 	degree   int           // Minimum degree (defines the order of the tree).
@@ -28,7 +28,7 @@ func NewBTree(degree int) *BTree {
 	return &BTree{
 		root: &Node{
 			keys:     make([]int, 0, 2*degree-1),
-			values:   make([]any, 0, 2*degree-1),
+			values:   make([]interface{}, 0, 2*degree-1),
 			children: make([]*Node, 0, 2*degree),
 			isLeaf:   true,
 			degree:   degree,
@@ -38,7 +38,7 @@ func NewBTree(degree int) *BTree {
 }
 
 // Insert inserts a key-value pair into the B-Tree.
-func (t *BTree) Insert(key int, value any) {
+func (t *BTree) Insert(key int, value interface{}) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 	if value == nil {
@@ -47,7 +47,7 @@ func (t *BTree) Insert(key int, value any) {
 	if t.root == nil {
 		t.root = &Node{
 			keys:     make([]int, 0, 2*t.degree-1),
-			values:   make([]any, 0, 2*t.degree-1),
+			values:   make([]interface{}, 0, 2*t.degree-1),
 			children: make([]*Node, 0, 2*t.degree),
 			isLeaf:   true,
 			degree:   t.degree,
@@ -77,7 +77,7 @@ func (t *BTree) splitChild(parent *Node, childIndex int) {
 	child := parent.children[childIndex]
 	newChild := &Node{
 		keys:     make([]int, 0, t.degree-1),
-		values:   make([]any, 0, t.degree-1),
+		values:   make([]interface{}, 0, t.degree-1),
 		children: make([]*Node, 0, t.degree),
 		isLeaf:   child.isLeaf,
 		degree:   t.degree,
@@ -124,6 +124,14 @@ func (t *BTree) insertNonFull(node *Node, key int, value interface{}) {
 	i := len(node.keys) - 1
 
 	if node.isLeaf {
+		// Check for duplicate keys and update the value if found
+		for idx, k := range node.keys {
+			if k == key {
+				node.values[idx] = value
+				return
+			}
+		}
+
 		// find the correct position to insert the key
 		for i >= 0 && key < node.keys[i] {
 			i--
@@ -158,7 +166,7 @@ func (t *BTree) insertNonFull(node *Node, key int, value interface{}) {
 }
 
 // Search searches for a key in the B-Tree and returns the value, if found.
-func (t *BTree) Search(key int) (any, bool) {
+func (t *BTree) Search(key int) (interface{}, bool) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
